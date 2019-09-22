@@ -1,0 +1,24 @@
+ apiVersion: apiextensions.k8s.io/v1beta1
+ kind: CustomResourceDefinition
+ metadata:
+   name: mongodatabases.urbanonsoftware.com
+ spec:
+   scope: Namespaced
+   group: urbanonsoftware.com
+   version: "v1alpha1"
+   validation:
+     openAPIV3Schema:
+       type: object
+       properties:
+         spec:
+           type: object
+           properties:
+             dbName:
+               type: string
+   names:
+     kind: MongoDatabase
+     plural: mongodatabases
+     singular: mongodatabase
+     shortNames:
+       - mongodbs
+       - mongodb

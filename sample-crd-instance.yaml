@@ -1,0 +1,52 @@
+apiVersion: urbanonsoftware.com/v1alpha1
+kind: MongoDatabase
+metadata:
+  name: hello-db10
+spec:
+  dbName: "hello_db10"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kubernetes-hello
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kubernetes-hello-label
+  template:
+    metadata:
+      labels:
+        app: kubernetes-hello-label
+    spec:
+      containers:
+        - name: kubernetes-hello
+          image: mdb_provider_test:local
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 80
+          env:
+            - name: ASPNETCORE_ENVIRONMENT
+              value: "Development"
+            - name: MongoDb__ConnectionString
+              valueFrom:
+                secretKeyRef:
+                  name: hello-db10-writer
+                  key: ConnectionString
+            - name: MongoDb__DbName
+              valueFrom:
+                secretKeyRef:
+                  name: hello-db10-writer
+                  key: DbName
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kubernetes-hello-service
+spec:
+  type: ClusterIP
+  selector:
+    app: kubernetes-hello-label
+  ports:
+    - protocol: TCP
+      port: 80
