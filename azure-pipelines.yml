@@ -17,4 +17,6 @@ steps:
     repository: 'onliner/k8s-mongo-db-provider'
     command: 'buildAndPush'
     Dockerfile: '**/Dockerfile'
-    tags: latest
+    tags: |
+      latest
+      0.0.1-alpha
