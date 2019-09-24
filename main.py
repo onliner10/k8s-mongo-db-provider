@@ -4,12 +4,13 @@ from pymongo import MongoClient
 from provider_core import *
 from secret_helpers import create_secret
 from seeker import Seeker
+from env_helpers import *
 
 API_GROUP = 'mongo-db-provider.urbanonsoftware.com'
-CLUSTER_DOMAIN = 'cluster.local'
-APP_NAME='mongodb-replicaset'
-TLS=False
-HARD_DELETE=True
+CLUSTER_DOMAIN = env_get_string('CLUSTER_DOMAIN', 'cluster.local')
+MONGO_APP_NAME= env_get_string('MONGO_APP_NAME', 'mongodb-replicaset')
+TLS=env_get_bool('TLS', False)
+HARD_DELETE=env_get_bool('HARD_DELETE', False)
 
 # uncomment for debug
 # kubernetes.config.load_kube_config()
@@ -33,7 +34,7 @@ def create_fn(body, **kwargs):
     db_name = resource_name
 
     api = kubernetes.client.CoreV1Api()
-    seeker = Seeker(api, APP_NAME, ns)
+    seeker = Seeker(api, MONGO_APP_NAME, ns)
     mongo_svc = seeker.seek_mongo_svc()
 
     client = create_mongo_admin_client(seeker)
@@ -68,6 +69,6 @@ def delete_fn(body, **kwargs):
     api.delete_namespaced_secret(writer_secret_name, ns)
 
     if HARD_DELETE:
-        seeker = Seeker(api, APP_NAME, ns)
+        seeker = Seeker(api, MONGO_APP_NAME, ns)
         client = create_mongo_admin_client(seeker)
         client.drop_database(resource_name)
