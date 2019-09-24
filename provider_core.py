@@ -15,12 +15,12 @@ def __get_credentials(db_name, suffix):
 
 def get_reader_credentials(db_name):
     """Return reader username, password for given database"""
-    return __get_credentials(db_name, '-reader')
+    return __get_credentials(db_name, 'reader')
 
 
 def get_writer_credentials(db_name):
     """Return writer username, password for given database"""
-    return __get_credentials(db_name, '-writer')
+    return __get_credentials(db_name, 'writer')
 
 
 def get_reader_secret_name(db_name):
