@@ -9,7 +9,7 @@ from env_helpers import *
 API_GROUP = 'mongo-db-provider.urbanonsoftware.com'
 CLUSTER_DOMAIN = env_get_string('CLUSTER_DOMAIN', 'cluster.local')
 MONGO_APP_NAME= env_get_string('MONGO_APP_NAME', 'mongodb-replicaset')
-TLS=env_get_bool('TLS', False)
+TLS=str(env_get_bool('TLS', False)).lower()
 HARD_DELETE=env_get_bool('HARD_DELETE', False)
 
 # uncomment for debug

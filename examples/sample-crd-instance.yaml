@@ -1,7 +1,7 @@
 apiVersion: mongo-db-provider.urbanonsoftware.com/v1alpha1
 kind: MongoDatabase
 metadata:
-  name: hello-db14
+  name: hello-db16
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -29,12 +29,12 @@ spec:
             - name: MongoDb__ConnectionString
               valueFrom:
                 secretKeyRef:
-                  name: hello-db14-writer
+                  name: hello-db16-writer
                   key: ConnectionString
             - name: MongoDb__DbName
               valueFrom:
                 secretKeyRef:
-                  name: hello-db14-writer
+                  name: hello-db16-writer
                   key: DbName
 ---
 apiVersion: v1

@@ -1,0 +1,28 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mongo-db-provider
+  labels:
+    app: mongo-db-provider
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mongo-db-provider
+  template:
+    metadata:
+      labels:
+        app: mongo-db-provider
+    spec:
+      containers:
+      - name: controller
+        image: onliner/k8s-mongo-db-provider:latest
+        env:
+        - name: CLUSTER_DOMAIN
+          value: 'cluster.local'
+        - name: MONGO_APP_NAME
+          value: 'mongodb-replicaset'
+        - name: TLS
+          value: 'False'
+        - name: HARD_DELETE
+          value: 'True'
