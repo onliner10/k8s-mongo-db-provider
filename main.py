@@ -1,29 +1,27 @@
 import kopf
-import kubernetes
-from pymongo import MongoClient
+
+import mongo_adapter
+import kubernetes_adapter
 from provider_core import *
-from secret_helpers import create_secret
-from seeker import Seeker
 from env_helpers import *
 
 API_GROUP = 'mongo-db-provider.urbanonsoftware.com'
 CLUSTER_DOMAIN = env_get_string('CLUSTER_DOMAIN', 'cluster.local')
-MONGO_APP_NAME= env_get_string('MONGO_APP_NAME', 'mongodb-replicaset')
-TLS=str(env_get_bool('TLS', False)).lower()
-HARD_DELETE=env_get_bool('HARD_DELETE', False)
+MONGO_APP_NAME = env_get_string('MONGO_APP_NAME', 'mongodb-replicaset')
+TLS = str(env_get_bool('TLS', False)).lower()
+HARD_DELETE = env_get_bool('HARD_DELETE', False)
+
 
 # uncomment for debug
 # kubernetes.config.load_kube_config()
 
-def construct_connection_string(ns, db_name, user, pwd, mongo_svc_name):
-    return f'mongodb+srv://{user}:{pwd}@{mongo_svc_name}.{ns}.svc.{CLUSTER_DOMAIN}/{db_name}?tls={TLS}'
+def create_mongo_adapter(kubernetes, domain, tls):
+    return mongo_adapter.MongoAdapter(kubernetes, domain, tls)
 
-def create_mongo_admin_client(seeker):
-    mongo_svc = seeker.seek_mongo_svc()
-    admin_usr, admin_pwd = seeker.seek_mongo_credentials()
-    admin_connection_string = construct_connection_string(seeker.ns, 'admin', admin_usr, admin_pwd, mongo_svc)
 
-    return MongoClient(admin_connection_string, ssl=TLS)
+def create_kubernetes_adapter(app_name, ns):
+    return kubernetes_adapter.KubernetesAdapter(app_name, ns)
+
 
 @kopf.on.create(API_GROUP, 'v1alpha1', 'mongodatabases')
 def create_fn(body, **kwargs):
@@ -33,26 +31,25 @@ def create_fn(body, **kwargs):
     resource_name = body['metadata']['name']
     db_name = resource_name
 
-    api = kubernetes.client.CoreV1Api()
-    seeker = Seeker(api, MONGO_APP_NAME, ns)
-    mongo_svc = seeker.seek_mongo_svc()
-
-    client = create_mongo_admin_client(seeker)
-    client[db_name]['__init'].insert_one({'init': 'ok'})
+    kubernetes = create_kubernetes_adapter(MONGO_APP_NAME, ns)
 
     reader_user, reader_pwd = get_reader_credentials(db_name)
     writer_user, writer_pwd = get_writer_credentials(db_name)
-    client[db_name].add_user(writer_user, writer_pwd, roles=[{'role':'readWrite','db':db_name}])
-    client[db_name].add_user(reader_user, reader_pwd, roles=[{'role': 'read', 'db': db_name}])
+
+    mongo = create_mongo_adapter(kubernetes, CLUSTER_DOMAIN, TLS)
+    mongo.init_database(db_name)
+    mongo.add_user(reader_user, reader_pwd, db_name, 'read')
+    mongo.add_user(writer_user, writer_pwd, db_name, 'readWrite')
 
     reader_secret_name = get_reader_secret_name(resource_name)
     writer_secret_name = get_writer_secret_name(resource_name)
 
-    writer_connection_string = construct_connection_string(ns, db_name, writer_user, writer_pwd, mongo_svc)
-    reader_connection_string = construct_connection_string(ns, db_name, reader_user, reader_pwd, mongo_svc)
+    writer_connection_string = mongo.connection_string(db_name, writer_user, writer_pwd)
+    reader_connection_string = mongo.connection_string(db_name, reader_user, reader_pwd)
 
-    create_secret(api, ns, reader_secret_name, reader_connection_string, db_name)
-    create_secret(api, ns, writer_secret_name, writer_connection_string, db_name)
+    kubernetes.create_secret(reader_secret_name, reader_connection_string, db_name)
+    kubernetes.create_secret(writer_secret_name, writer_connection_string, db_name)
+
 
 @kopf.on.delete(API_GROUP, 'v1alpha1', 'mongodatabases')
 def delete_fn(body, **kwargs):
@@ -64,11 +61,10 @@ def delete_fn(body, **kwargs):
     reader_secret_name = get_reader_secret_name(resource_name)
     writer_secret_name = get_writer_secret_name(resource_name)
 
-    api = kubernetes.client.CoreV1Api()
-    api.delete_namespaced_secret(reader_secret_name, ns)
-    api.delete_namespaced_secret(writer_secret_name, ns)
+    kubernetes = create_kubernetes_adapter(MONGO_APP_NAME, ns)
+    kubernetes.delete_secret(reader_secret_name)
+    kubernetes.delete_secret(writer_secret_name)
 
     if HARD_DELETE:
-        seeker = Seeker(api, MONGO_APP_NAME, ns)
-        client = create_mongo_admin_client(seeker)
-        client.drop_database(resource_name)
+        mongo = create_mongo_adapter(kubernetes, CLUSTER_DOMAIN, TLS)
+        mongo.drop_database(resource_name)
