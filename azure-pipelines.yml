@@ -19,4 +19,4 @@ steps:
     Dockerfile: '**/Dockerfile'
     tags: |
       latest
-      0.0.2-alpha
+      0.0.3-alpha
