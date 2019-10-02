@@ -1,12 +1,6 @@
 import base64
 import kubernetes
-
-
-def parse_credentials(secret):
-    user = base64.b64decode(secret.data['user']).decode("utf-8")
-    pwd = base64.b64decode(secret.data['password']).decode("utf-8")
-
-    return user, pwd
+from kubernetes.client.rest import ApiException
 
 
 class KubernetesAdapter:
@@ -27,12 +21,6 @@ class KubernetesAdapter:
             app_label == self.label_value \
             and name.endswith(ends)
 
-    def parse_credentials(secret):
-        user = base64.b64decode(secret.data['user']).decode("utf-8")
-        pwd = base64.b64decode(secret.data['password']).decode("utf-8")
-
-        return user, pwd
-
     def seek_mongo_svc(self):
         svcs = self.api.list_namespaced_service(self.ns).items
 
@@ -42,9 +30,17 @@ class KubernetesAdapter:
     def seek_mongo_credentials(self):
         secrets = self.api.list_namespaced_secret(self.ns).items
         admin_secret = next(x for x in secrets if self.__has_label_and_ends_with(x, 'admin'))
-        return parse_credentials(admin_secret)
 
-    def __to_b64(self, data):
+        b64_user = admin_secret.data['user']
+        b64_pwd = admin_secret.data['password']
+
+        user = base64.b64decode(b64_user).decode("utf-8")
+        pwd = base64.b64decode(b64_pwd).decode("utf-8")
+
+        return user, pwd
+
+    @staticmethod
+    def __to_b64(data):
         return str(base64.b64encode(data.encode('utf-8')), "utf-8")
 
     def create_secret(self, secret_name, connection_string, db_name):
@@ -57,4 +53,10 @@ class KubernetesAdapter:
         self.api.create_namespaced_secret(self.ns, secret_body)
 
     def delete_secret(self, secret_name):
-        self.api.delete_namespaced_secret(secret_name, self.ns)
+        try:
+            self.api.delete_namespaced_secret(secret_name, self.ns)
+        except ApiException as e:
+            if e.status == 404:
+                print("Secret '%s' already deleted, continuing" % secret_name)
+                return
+            raise

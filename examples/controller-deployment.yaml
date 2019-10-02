@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
       - name: controller
-        image: onliner/k8s-mongo-db-provider:0.0.2-alpha
+        image: onliner/k8s-mongo-db-provider:0.0.4-alpha
         env:
         - name: CLUSTER_DOMAIN
           value: 'cluster.local'

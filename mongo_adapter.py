@@ -22,4 +22,9 @@ class MongoAdapter:
         self.client[db_name].add_user(name, password, roles=[{'role': role, 'db': db_name}])
 
     def drop_database(self, db_name):
-        self.client.drop_database(db_name)
+        all_dbs = self.client.list_database_names()
+
+        if db_name in all_dbs:
+            self.client.drop_database(db_name)
+        else:
+            print("Database '%s' already deleted" % db_name)
