@@ -13,7 +13,7 @@ class MongoAdapter:
         self.client = MongoClient(admin_connection_string, ssl = self.tls)
 
     def connection_string(self, db_name, user, pwd):
-        return f'mongodb://{user}:{pwd}@{self.mongo_svc}.{self.seeker.ns}.svc.{self.cluster_domain}/{db_name}?tls={self.tls}'
+        return f'mongodb+srv://{user}:{pwd}@{self.mongo_svc}.{self.seeker.ns}.svc.{self.cluster_domain}/{db_name}?tls={self.tls}'
 
     def init_database(self, db_name):
         self.client[db_name]['__init'].insert_one({'init': 'ok'})
